@@ -1,0 +1,22 @@
+{
+  "name": "comment_crawling",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "app-store-scraper": "^0.18.0",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "fs": "^0.0.1-security",
+    "google-play-scraper": "^10.0.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "xlsx": "^0.18.5"
+  }
+}
