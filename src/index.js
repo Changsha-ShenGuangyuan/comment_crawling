@@ -228,7 +228,6 @@ app.get(`${BASE_PATH}/login`, (req, res) => {
   if (req.session.authenticated) {
     return res.redirect(`${BASE_PATH}/`);
   }
-  
   res.send(`
     <!DOCTYPE html>
     <html lang="zh-CN">
@@ -245,6 +244,9 @@ app.get(`${BASE_PATH}/login`, (req, res) => {
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; }
         .alert { border-radius: 10px; }
       </style>
+      <script>
+        window.BASE_PATH = '${BASE_PATH}';
+      </script>
     </head>
     <body>
       <div class="container login-container">
@@ -279,19 +281,17 @@ app.get(`${BASE_PATH}/login`, (req, res) => {
           </div>
         </div>
       </div>
-      
       <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
       <script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
       <script>
         $('#loginForm').on('submit', function(e) {
           e.preventDefault();
-          
           const password = $('#password').val();
           const errorAlert = $('#error-alert');
-          
-          $.post('/api/login', { password: password })
+          const basePath = window.BASE_PATH || '';
+          $.post(basePath + '/api/login', { password: password })
             .done(function() {
-              window.location.href = '/';
+              window.location.href = basePath + '/';
             })
             .fail(function(xhr) {
               const response = xhr.responseJSON || { error: '登录失败' };
