@@ -16,8 +16,10 @@ const authMiddleware = (req, res, next) => {
       return next();
     }
   
+    console.log('req.session', req.session);
     // 检查session中是否已认证
     if (req.session && req.session.authenticated) {
+    
       return next();
     }
   

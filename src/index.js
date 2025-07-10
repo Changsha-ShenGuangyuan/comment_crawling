@@ -282,7 +282,7 @@ app.get(`${BASE_PATH}/login`, (req, res) => {
         </div>
       </div>
       <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-      <script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
+     
       <script>
         $('#loginForm').on('submit', function(e) {
           e.preventDefault();
