@@ -42,7 +42,21 @@
 </head>
 <body>
   <div class="container">
-    <h1>申广源评论下载工具</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1>申广源评论下载工具</h1>
+      <div>
+        <button type="button" class="btn btn-info btn-sm" onclick="checkStatus()">
+          <i class="fas fa-info-circle"></i> 状态
+        </button>
+        <a href="/logout" class="btn btn-outline-secondary btn-sm ml-2">
+          <i class="fas fa-sign-out-alt"></i> 退出登录
+        </a>
+      </div>
+    </div>
+    <div class="alert alert-info">
+      <i class="fas fa-shield-alt"></i> <strong>安全提示：</strong>
+      您已通过安全认证。每小时最多可进行5次评论爬取，请合理使用。
+    </div>
     <form id="download-form" action="#" method="get" target="hidden-iframe">
 
       <!-- 平台选择 -->
@@ -163,6 +177,47 @@
     // 初始化 Select2
     $('#country, #lang').select2();
 
+    // 状态检查函数
+    function checkStatus() {
+      $.ajax({
+        url: '/api/status',
+        method: 'GET',
+        success: function(response) {
+          const statusInfo = `
+            <strong>系统状态：</strong>${response.status}<br>
+            <strong>登录时间：</strong>${new Date(response.loginTime).toLocaleString()}<br>
+            <strong>您的IP：</strong>${response.userIP}<br>
+            <strong>服务器时间：</strong>${new Date(response.serverTime).toLocaleString()}
+          `;
+          $('#errorModal .modal-title').text('系统状态');
+          $('#errorModal .modal-body').html(statusInfo);
+          $('#errorModal').modal('show');
+        },
+        error: function(xhr) {
+          if (xhr.status === 401) {
+            alert('会话已过期，请重新登录');
+            window.location.href = '/login';
+          } else {
+            alert('获取状态失败');
+          }
+        }
+      });
+    }
+
+    // 显示错误信息的函数
+    function showError(message, title = '错误') {
+      $('#errorModal .modal-title').text(title);
+      $('#errorModal .modal-body').html(message);
+      $('#errorModal').modal('show');
+    }
+
+    // 显示成功信息的函数
+    function showSuccess(message, title = '成功') {
+      $('#errorModal .modal-title').text(title);
+      $('#errorModal .modal-body').html(`<div class="text-success"><i class="fas fa-check-circle"></i> ${message}</div>`);
+      $('#errorModal').modal('show');
+    }
+
     // 页面加载时，通过 AJAX 获取国家和语言
     $(document).ready(function() {
       $.ajax({
@@ -207,8 +262,14 @@
           // 重新初始化 Select2，确保数据加载后可以搜索
           $('#country, #lang').select2();
         },
-        error: function(err) {
-          console.error('无法获取国家和语言列表', err);
+        error: function(xhr) {
+          console.error('无法获取国家和语言列表', xhr);
+          if (xhr.status === 401) {
+            alert('会话已过期，请重新登录');
+            window.location.href = '/login';
+          } else {
+            showError('无法加载国家和语言列表，请刷新页面重试');
+          }
         }
       });
 
@@ -248,32 +309,58 @@
             $('#download-button').attr('disabled', false);
             
             $('#loadingModal').modal('hide').on('hidden.bs.modal', function () {
-              $(this).removeData('bs.modal'); // 确保每次清除模态框的状态
+              $(this).removeData('bs.modal');
             });
 
-            // 下载文件
-            window.location.href = `/download?filename=${response.filename}`;
+            if (response.success) {
+              showSuccess(response.message || '评论爬取成功！即将开始下载文件。');
+              
+              // 延迟一下再下载，让用户看到成功提示
+              setTimeout(() => {
+                window.location.href = `/download?filename=${response.filename}`;
+              }, 1500);
+            } else {
+              showError('爬取失败，请重试');
+            }
           },
           error: function(xhr) {
             // 隐藏加载提示
             $('.loading').hide();
             $('#download-button').attr('disabled', false);
             
-            // 获取错误消息
-            const errorMessage = xhr.responseText || '未知错误';
-
-
             // 失败时，关闭加载指示器
             setTimeout(function() {
               $('#loadingModal').modal('hide').on('hidden.bs.modal', function () {
-                $(this).removeData('bs.modal'); // 确保每次清除模态框的状态
+                $(this).removeData('bs.modal');
               });
             }, 300);
 
+            let errorMessage = '未知错误';
+            let errorTitle = '错误';
+            
+            try {
+              const response = JSON.parse(xhr.responseText);
+              errorMessage = response.error || errorMessage;
+              
+              // 根据错误类型显示不同的标题
+              if (xhr.status === 429) {
+                errorTitle = '请求过于频繁';
+                if (response.retryAfter) {
+                  errorMessage += `，请等待 ${response.retryAfter} 秒后重试`;
+                }
+              } else if (xhr.status === 401) {
+                errorTitle = '认证失败';
+                setTimeout(() => {
+                  window.location.href = '/login';
+                }, 2000);
+              } else if (xhr.status === 400) {
+                errorTitle = '请求参数错误';
+              }
+            } catch (e) {
+              errorMessage = xhr.responseText || errorMessage;
+            }
 
-            // 显示错误模态框
-            $('#errorModal .modal-body').text(errorMessage);  // 在模态框中显示错误信息
-            $('#errorModal').modal('show');  // 弹出模态框
+            showError(errorMessage, errorTitle);
            
           }, complete: function() {
             // 确保在完成后也关闭加载指示器
