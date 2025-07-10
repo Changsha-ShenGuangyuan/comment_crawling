@@ -15,6 +15,9 @@ import { isIPAllowed, getSessionConfig, logSecurityEvent, sanitizeInput } from '
 // 加载环境变量
 dotenv.config();
 
+// 获取基础路径
+const BASE_PATH = process.env.BASE_PATH || '';
+
 // 获取 __dirname 的 ES 模块兼容版本
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -210,10 +213,20 @@ const fetchIOSReviews = async (appId, rating, country, lang, filename) => {
   }
 };
 
+// 静态文件服务加BASE_PATH前缀
+app.use(`${BASE_PATH}`, express.static(path.join(__dirname, 'public')));
+
+// 如果设置了BASE_PATH，根路径返回404
+if (BASE_PATH) {
+  app.get('/', (req, res) => {
+    res.status(404).send('Not Found');
+  });
+}
+
 // 登录页面
-app.get('/login', (req, res) => {
+app.get(`${BASE_PATH}/login`, (req, res) => {
   if (req.session.authenticated) {
-    return res.redirect('/');
+    return res.redirect(`${BASE_PATH}/`);
   }
   
   res.send(`
@@ -293,7 +306,7 @@ app.get('/login', (req, res) => {
 });
 
 // 登录API
-app.post('/api/login', loginLimiter, (req, res) => {
+app.post(`${BASE_PATH}/api/login`, loginLimiter, (req, res) => {
   const { password } = req.body;
   const clientIp = req.ip;
   
@@ -326,7 +339,7 @@ app.post('/api/login', loginLimiter, (req, res) => {
 });
 
 // 退出登录
-app.get('/logout', (req, res) => {
+app.get(`${BASE_PATH}/logout`, (req, res) => {
   const clientIp = req.ip;
   logSecurityEvent('LOGOUT', clientIp);
   
@@ -334,12 +347,12 @@ app.get('/logout', (req, res) => {
     if (err) {
       console.error('销毁session失败:', err);
     }
-    res.redirect('/login');
+    res.redirect(`${BASE_PATH}/login`);
   });
 });
 
 // 系统状态API（仅限已登录用户）
-app.get('/api/status', apiLimiter, (req, res) => {
+app.get(`${BASE_PATH}/api/status`, apiLimiter, (req, res) => {
   res.json({
     status: 'online',
     authenticated: true,
@@ -349,11 +362,8 @@ app.get('/api/status', apiLimiter, (req, res) => {
   });
 });
 
-// 设置静态文件路径
-app.use(express.static(path.join(__dirname, 'public')));
-
 // 提交表单后，获取评论并导出（应用爬取限制）
-app.get('/fetch-reviews', crawlLimiter, async (req, res) => {
+app.get(`${BASE_PATH}/fetch-reviews`, crawlLimiter, async (req, res) => {
   const clientIp = req.ip;
   
   // 清理和验证输入参数
@@ -456,12 +466,12 @@ app.get('/fetch-reviews', crawlLimiter, async (req, res) => {
 });
 
 // 返回所有国家和语言的 API
-app.get('/api/countries-languages', apiLimiter, (req, res) => {
+app.get(`${BASE_PATH}/api/countries-languages`, apiLimiter, (req, res) => {
   res.json({ countries, languages });
 });
 
 // 下载生成的文件
-app.get('/download', (req, res) => {
+app.get(`${BASE_PATH}/download`, (req, res) => {
   const requestedFilename = sanitizeInput(req.query.filename);
   const clientIp = req.ip;
   
