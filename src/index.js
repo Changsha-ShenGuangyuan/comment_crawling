@@ -319,12 +319,12 @@ app.post(`${BASE_PATH}/api/login`, loginLimiter, (req, res) => {
   }
   
   const adminPassword = process.env.ADMIN_PASSWORD;
-  console.log('adminPassword', adminPassword);
+  // console.log('adminPassword', adminPassword);
   if (!adminPassword) {
     logSecurityEvent('LOGIN_NO_ADMIN_PASSWORD', clientIp);
     return res.status(500).json({ error: '服务器配置错误' });
   }
-  console.log('cleanPassword', cleanPassword);
+  // console.log('cleanPassword', cleanPassword);
   if (cleanPassword === adminPassword) {
     req.session.authenticated = true;
     req.session.loginTime = new Date().toISOString();
